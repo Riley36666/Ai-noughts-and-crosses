@@ -1,6 +1,8 @@
 import pygame
 import sys
 import math
+import tkinter as tk
+import threading
 
 # --- Game Setup ---
 WIDTH, HEIGHT = 600, 600
@@ -19,8 +21,10 @@ LINE_COLOR = (23, 145, 135)
 CIRCLE_COLOR = (239, 231, 200)
 CROSS_COLOR = (84, 84, 84)
 
-# Initialize board
+# Game state
 board = [" " for _ in range(9)]
+playerscore = 0
+Aiscore = 0
 
 # Initialize pygame
 pygame.init()
@@ -28,7 +32,26 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Noughts and Crosses AI')
 screen.fill(BG_COLOR)
 FONT = pygame.font.SysFont(None, 50)
-# Draw grid
+
+
+scores_vars = {}
+
+def start_score_window():
+    def show_score():
+        root = tk.Tk()
+        root.title("Scoreboard")
+        root.geometry("300x150+700+100")  # position near the game window
+        player_var = tk.StringVar()
+        ai_var = tk.StringVar()
+        tk.Label(root, text="Scoreboard", font=("Arial", 18)).pack(pady=5)
+        tk.Label(root, textvariable=player_var, font=("Arial", 16)).pack(pady=5)
+        tk.Label(root, textvariable=ai_var, font=("Arial", 16)).pack(pady=5)
+
+        root.mainloop()
+
+    threading.Thread(target=show_score, daemon=True).start()
+
+# Draw grid lines
 def draw_lines():
     for i in range(1, BOARD_ROWS):
         pygame.draw.line(screen, LINE_COLOR, (0, i * SQUARE_SIZE), (WIDTH, i * SQUARE_SIZE), LINE_WIDTH)
@@ -96,6 +119,7 @@ def best_move():
                 best_score = score
                 move = i
     return move
+
 def draw_rematch_box():
     box_width, box_height = 400, 200
     box_x = WIDTH // 2 - box_width // 2
@@ -103,16 +127,13 @@ def draw_rematch_box():
     pygame.draw.rect(screen, (250, 250, 250), (box_x, box_y, box_width, box_height))
     pygame.draw.rect(screen, LINE_COLOR, (box_x, box_y, box_width, box_height), 5)
 
-    # Text
     text = FONT.render("Play again?", True, (0, 0, 0))
     screen.blit(text, (box_x + 100, box_y + 30))
 
-    # Yes button
     pygame.draw.rect(screen, (0, 200, 0), (box_x + 50, box_y + 100, 120, 50))
     yes_text = FONT.render("Yes", True, (255, 255, 255))
     screen.blit(yes_text, (box_x + 80, box_y + 110))
 
-    # No button
     pygame.draw.rect(screen, (200, 0, 0), (box_x + 230, box_y + 100, 120, 50))
     no_text = FONT.render("No", True, (255, 255, 255))
     screen.blit(no_text, (box_x + 270, box_y + 110))
@@ -127,7 +148,6 @@ def restart():
     while True:
         pygame.display.update()
         buttons = draw_rematch_box()
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -145,13 +165,17 @@ def restart():
                 elif buttons["no"].collidepoint(event.pos):
                     pygame.quit()
                     sys.exit()
-    
 
-# Main loop
+# Start everything
 draw_lines()
 game_over = False
 player_turn = True
-while game_over == False:
+
+
+start_score_window()
+
+# Main game loop
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -160,7 +184,6 @@ while game_over == False:
         if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
             mouseX = event.pos[0]
             mouseY = event.pos[1]
-
             clicked_row = mouseY // SQUARE_SIZE
             clicked_col = mouseX // SQUARE_SIZE
             index = clicked_row * 3 + clicked_col
@@ -179,14 +202,11 @@ while game_over == False:
             player_turn = True
 
         if check_winner(board, "X"):
-            print("You win!")
             restart()
         elif check_winner(board, "O"):
-            print("AI wins!")
+            Aiscore += 1
             restart()
         elif is_draw(board):
-            print("Draw!")
             restart()
-
 
     pygame.display.update()
